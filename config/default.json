@@ -1,0 +1,8 @@
+{
+    "appConfig": {
+        "port": "4010"
+    },
+    "dbConfig": {
+        "connectionstring": "mongodb://admin:admin321@ds155313.mlab.com:55313/alibay-marketplace"
+    }
+}

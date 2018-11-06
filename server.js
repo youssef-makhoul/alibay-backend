@@ -1,17 +1,37 @@
-const EXPRESS_PORT_NUM = 4010;
+let config = require('config');
+let dbConfig = config.get('dbConfig');
+let appConfig = config.get('appConfig');
 
-let express = require('express');
-let app = express();
-let bodyParser = require('body-parser');
+let app = require('express')();
 
-app.use(bodyParser.raw({
-    type: '*/*'
-}));
+let MongoClient = require("mongodb").MongoClient;
+let db;
 
-app.get('/ping', (req, res) => {
+let logger = require('./config/winston')
+
+
+app.use(
+    require('body-parser').raw({
+        type: "*/*"
+    })
+);
+
+// Initialize connection once
+MongoClient.connect(
+    dbConfig.connectionstring, {
+        useNewUrlParser: true
+    },
+    function (err, database) {
+        if (err) throw err;
+        db = database;
+        app.listen(appConfig.port, () => {
+            logger.log('info', "listen on port " + appConfig.port);
+        });
+    }
+);
+
+//starting of endpoints
+
+app.get("/ping", (req, res) => {
     res.send("Hello World");
-});
-
-app.listen(EXPRESS_PORT_NUM, () => {
-    console.log("listen on port " + EXPRESS_PORT_NUM);
 });
