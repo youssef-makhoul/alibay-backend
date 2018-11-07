@@ -24,8 +24,14 @@ const logger = createLogger({
         myFormat
     ),
     transports: [
-        new transports.Console(), 
-        new transports.File({filename: './logs/combined.log'})
+        new transports.Console(),
+        new transports.File({
+            level: 'warn',
+            filename: './logs/error.log'
+        }),
+        new transports.File({
+            filename: './logs/combined.log'
+        })
     ]
 });
 

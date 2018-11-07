@@ -1,0 +1,321 @@
+openapi: 3.0.0
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/youssef-makhoul/alibay/1.0.0
+info:
+  description: API for Alibay Project
+  version: "1.0.0"
+  title: Alibay API
+  contact:
+    email: makhoul.youssef@gmail.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: items
+    description: item related end points
+  - name: users
+    description: user related end points
+  - name: cart
+    description: cart related end points
+paths:
+  /signup:
+    post:
+      tags:
+        - users
+      summary: create user profile
+      operationId: signup
+      description: create user profile to join alibay site
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/user'
+      responses:
+        '200':
+          description: Successfully authenticated.>
+            The session ID is returned in the cookie, You need to include this cookie in subsequent requests.
+          headers: 
+            Set-Cookie:
+              schema: 
+                type: string
+                example: "012345678901234"
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/successmsg'
+  /signin:
+    post:
+      tags:
+        - users
+      summary: login to existing profile
+      operationId: signin
+      description: login to using password and username
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/user'
+      responses:
+        '200':
+          description: Successfully authenticated.>
+            The session ID is returned in the cookie, You need to include this cookie in subsequent requests.
+          headers: 
+            Set-Cookie:
+              schema: 
+                type: string
+                example: "012345678901234"
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/successmsg'
+  /getallitems:
+    get:
+      tags:
+        - items
+      summary: get all the items stored in the database
+      operationId: getallitems
+      description: get all the items stored in the database
+      parameters:
+        - in: cookie
+          name: sessionid
+          schema:
+            type: string
+            example : "012345678901234"
+      responses:
+        '200':
+          description: Successfully authenticated.>
+            and send back a list of items in the body
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: string
+                    example: "0000"
+                  message:
+                    type: string
+                    example: "0000"
+                    description: item id to be deleted
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/item'
+  /additem:
+    post:
+      tags:
+        - items
+      summary: add item to the database
+      operationId: additem
+      description: add item to the collection of items for a specific user
+      parameters:
+        - in: cookie
+          name: sessionid
+          schema:
+            type: string
+            example : "012345678901234"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/item'
+              description: item to be added (no id needed)
+      responses:
+        '200':
+          description: Successfully added
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/successmsg'
+  /deleteitem:
+    post:
+      tags:
+        - items
+      summary: delete item from the database
+      operationId: deleteitem
+      description: deleteitem item from the collection of items for a specific user.
+      parameters:
+        - in: cookie
+          name: sessionid
+          schema:
+            type: string
+            example : "012345678901234"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:          # <!--- form field name
+                  type: string
+                  example: "0000"
+                  description: item id to be deleted
+              
+      responses:
+        '200':
+          description: Successfully added
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/successmsg'
+  /updateitem:
+    post:
+      tags:
+        - items
+      summary: update item from the database
+      operationId: updateitem
+      description: updateitem item from the collection of items for a specific user.
+      parameters:
+        - in: cookie
+          name: sessionid
+          schema:
+            type: string
+            example : "012345678901234"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/item'
+              description: item to be updated (should have id)
+      responses:
+        '200':
+          description: Successfully added
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/successmsg'
+  /additemtocart:
+    post:
+      tags:
+        - cart
+      summary: add item to user cart
+      operationId: additemtocart
+      description: add item to user cart.
+      parameters:
+        - in: cookie
+          name: sessionid
+          schema:
+            type: string
+            example : "012345678901234"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: "0000"
+                  description: item id to be added to cart
+      responses:
+        '200':
+          description: Successfully added
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/successmsg'
+  /removeitemfromcart:
+     post:
+      tags:
+        - cart
+      summary: remove item from user cart
+      operationId: removeitemfromcart
+      description: remove item from user cart
+      parameters:
+        - in: cookie
+          name: sessionid
+          schema:
+            type: string
+            example : "012345678901234"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: "0000"
+                  description: item id to be added to removed from cart
+      responses:
+        '200':
+          description: Successfully added
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/successmsg'
+components:
+  schemas:
+    user:
+      type: object
+      required: 
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "bob"
+        password:
+          type: string
+          format: password
+          example: "pwd123"
+    successmsg:
+      type: object
+      properties:
+        status:
+          type: boolean
+        message:
+          type: string
+      required:
+        - code
+        - message
+    item:
+      type: object
+      required:
+        - name
+        - price
+        - image
+        - quantity
+        - description
+      properties:
+        id:
+          type: string
+          example: "01"
+        name:
+          type: string
+          example: "car"
+        price:
+          type: number
+          format: float
+          example: 1000.45
+        image:
+          type: string
+          example: "/img/car"
+        quantity:
+          type: number
+          example: 5
+        description:
+          type: string
+          example: "this is a nice car"
+  responses:
+    NotFound:
+      description: The specified resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/successmsg'
+    Unauthorized:
+      description: Unauthorized / Session Id not recognized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/successmsg'
+    UserNameAlreadyUsed:
+      description: The specified resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/successmsg'
+    
+    
