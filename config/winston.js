@@ -18,7 +18,7 @@ const myFormat = printf(info => {
 const logger = createLogger({
     format: combine(
         label({
-            label: ''
+            label:''
         }),
         timestamp(),
         myFormat
@@ -27,7 +27,8 @@ const logger = createLogger({
         new transports.Console(),
         new transports.File({
             level: 'warn',
-            filename: './logs/error.log'
+            filename: './logs/error.log',
+            json: true
         }),
         new transports.File({
             filename: './logs/combined.log'
