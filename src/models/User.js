@@ -13,6 +13,20 @@ let UserSchema = new Schema({
     password: {
         type: String,
         required: true
+    },
+    cart: {
+        type: [{
+            item: {
+                type: Schema.Types.ObjectId,
+                ref: 'item',
+                required: true
+            },
+            quantity: {
+                type: Number,
+                required: true,
+            }
+        }],
+        required: false
     }
 });
 

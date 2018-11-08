@@ -34,7 +34,7 @@ mongoose.connect(
 // Get Mongoose to use the global promise library
 mongoose.Promise = global.Promise;
 //Get the default connection
-var db = mongoose.connection;
+let db = mongoose.connection;
 //Bind connection to error event (to get notification of connection errors)
 db.on("error", console.error.bind(console, "MongoDB connection error:"));
 //Body Parser
@@ -76,7 +76,7 @@ let sendSuccessResponse = (res, msg, objName, obj) => {
 
 app.post("/signup", (req, res) => {
     try {
-        var ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+        let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
         logger.info("signup request from : " + ip);
 
         let username = JSON.parse(req.body).username;
@@ -108,7 +108,7 @@ app.post("/signup", (req, res) => {
 
 app.post("/login", (req, res) => {
     try {
-        var ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+        let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
         logger.info("login request from : " + ip);
         let username = JSON.parse(req.body).username;
         let password = JSON.parse(req.body).password;
@@ -139,7 +139,7 @@ app.post("/login", (req, res) => {
 });
 
 app.get('/logout', (req, res) => {
-    var ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
     logger.info("logout request from : " + ip);
 
     let sessionid = req.headers.cookie;
@@ -153,7 +153,7 @@ app.get('/logout', (req, res) => {
 });
 
 app.get('/getallitems', (req, res) => {
-    var ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
     logger.info("getallitems request from : " + ip);
 
     let sessionid = req.headers.cookie;
@@ -163,7 +163,7 @@ app.get('/getallitems', (req, res) => {
         return;
     }
     Item.find({})
-        .populate('user',['username','_id'])
+        .populate('user', ['username', '_id'])
         .exec()
         .then((result, err) => {
             if (err) sendFailResponse(res, "error getting items from the database: " + err.message);
@@ -174,7 +174,7 @@ app.get('/getallitems', (req, res) => {
 });
 
 app.post('/additem', (req, res) => {
-    var ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
     logger.info("additem request from : " + ip);
 
     let parsedItem = JSON.parse(req.body);
@@ -203,7 +203,7 @@ app.post('/additem', (req, res) => {
 });
 
 app.post('/deleteitem', (req, res) => {
-    var ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
     logger.info("deleteitem request from : " + ip);
 
     let parsedItem = JSON.parse(req.body);
@@ -224,7 +224,7 @@ app.post('/deleteitem', (req, res) => {
 });
 
 app.post('/updateitem', (req, res) => {
-    var ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
     logger.info("updateitem request from : " + ip);
 
     let parsedItem = JSON.parse(req.body);
@@ -241,5 +241,103 @@ app.post('/updateitem', (req, res) => {
             if (err) sendFailResponse(res, "error updating item from the database: " + err.message);
             else if (result.n > 0) sendSuccessResponse(res, "item updated successfully");
             else sendFailResponse(res, "no item found with id " + parsedItem.id);
+        });
+});
+
+app.post('/additemtocart', (req, res) => {
+    let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    logger.info("additemtocart request from : " + ip);
+
+    let parsedItem = JSON.parse(req.body);
+    let sessionid = req.headers.cookie;
+    let userid = sessions.getUserID(sessionid);
+    if (userid === undefined) {
+        sendFailResponse(res, "not authorized ! - sessionid not recognized");
+        return;
+    }
+    if (parsedItem.id == null) {
+        sendFailResponse(res, "item id was not found");
+        return;
+    }
+    Item.findOne({
+            _id: parsedItem.id
+        })
+        .exec()
+        .then((item, err) => {
+            if (err) sendFailResponse(res, "error getting item from the database: " + err.message);
+            else if (item == null) sendFailResponse(res, `no item found with id ${parsedItem.id}`);
+            else {
+                User.findOne({
+                        _id: userid
+                    })
+                    .exec()
+                    .then((user, error) => {
+                        if (error) sendFailResponse(res, `error getting user from the database: ${err.message}`);
+                        else if (user == null) sendFailResponse(res, `no item found with id ${parsedItem.id}`);
+                        else {
+                            let updated = false
+                            for (let i = 0; i < user.cart.length; i++) {
+                                if (user.cart[i].item._id.equals(item._id)) user.cart[i].quantity = user.cart[i].quantity + 1;
+                                updated = true;
+                            }
+                            if (!updated) user.cart.push({
+                                item: item._id,
+                                quantity: 1
+                            });
+                            user.save(function (err) {
+                                if (err) sendFailResponse(res, "error addind the item to the cart: " + err.message);
+                                else sendSuccessResponse(res, "item added to cart successfully");
+                            });
+                        }
+                    });
+            }
+        });
+});
+
+
+app.post('/removeitemfromcart', (req, res) => {
+    let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    logger.info("removeitemfromcart request from : " + ip);
+
+    let parsedItem = JSON.parse(req.body);
+    let sessionid = req.headers.cookie;
+    let userid = sessions.getUserID(sessionid);
+    if (userid === undefined) {
+        sendFailResponse(res, "not authorized ! - sessionid not recognized");
+        return;
+    }
+    if (parsedItem.id == null) {
+        sendFailResponse(res, "item id was not found");
+        return;
+    }
+    Item.findOne({
+            _id: parsedItem.id
+        })
+        .exec()
+        .then((item, err) => {
+            if (err) sendFailResponse(res, "error getting item from the database: " + err.message);
+            else if (item == null) sendFailResponse(res, `no item found with id ${parsedItem.id}`);
+            else {
+                User.findOne({
+                        _id: userid
+                    })
+                    .exec()
+                    .then((user, error) => {
+                        if (error) sendFailResponse(res, `error getting user from the database: ${err.message}`);
+                        else if (user == null) sendFailResponse(res, `no item found with id ${parsedItem.id}`);
+                        else {
+                            for (let i = 0; i < user.cart.length; i++) {
+                                if (user.cart[i].item._id.equals(item._id)) user.cart[i].quantity = user.cart[i].quantity - 1;
+                                if (user.cart[i].quantity === 0) user.cart.remove({
+                                    _id: user.cart[i]._id
+                                });
+                            }
+                            user.save(function (err) {
+                                if (err) sendFailResponse(res, "error remove the item from the cart: " + err.message);
+                                else sendSuccessResponse(res, "item removed from cart successfully");
+                            });
+                        }
+                    });
+            }
         });
 });
