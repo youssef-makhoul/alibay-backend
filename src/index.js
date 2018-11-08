@@ -86,7 +86,7 @@ app.post("/signup", (req, res) => {
             return;
         }
         User.exists(username).then(exists => {
-            if (exists) sendFailResponse(res, "username " + username + " already exists !");
+            if (exists) sendFailResponse(res, `username ${username} already exists !`);
             else {
                 let user = new User({
                     username: username,
@@ -96,7 +96,7 @@ app.post("/signup", (req, res) => {
                     if (err) sendFailResponse(res, "error addind the user to the database: " + err.message);
                     else {
                         res.set("Set-Cookie", sessions.setNewSession(user.id));
-                        sendSuccessResponse(res, "username " + username + " added");
+                        sendSuccessResponse(res, `username ${username} added`);
                     }
                 });
             }
@@ -117,7 +117,7 @@ app.post("/login", (req, res) => {
             return;
         }
         User.exists(username).then(exists => {
-            if (!exists) sendFailResponse(res, "username " + username + " does not exists !");
+            if (!exists) sendFailResponse(res, `username ${username} does not exists !`);
             else User.findOne({
                     username: username
                 })
@@ -129,7 +129,7 @@ app.post("/login", (req, res) => {
                         if (ok) {
                             res.set("Set-Cookie", sessions.setNewSession(result.id));
                             sendSuccessResponse(res, "authenticated ok");
-                        } else sendFailResponse(res, "wrong password for user: " + username);
+                        } else sendFailResponse(res, `wrong password for user: ${username}`);
                     }
                 });
         });
@@ -139,6 +139,9 @@ app.post("/login", (req, res) => {
 });
 
 app.get('/logout', (req, res) => {
+    var ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    logger.info("logout request from : " + ip);
+
     let sessionid = req.headers.cookie;
     let userid = sessions.getUserID(sessionid);
     if (userid === undefined) {
@@ -150,6 +153,9 @@ app.get('/logout', (req, res) => {
 });
 
 app.get('/getallitems', (req, res) => {
+    var ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    logger.info("getallitems request from : " + ip);
+
     let sessionid = req.headers.cookie;
     let userid = sessions.getUserID(sessionid);
     if (userid === undefined) {
@@ -157,16 +163,20 @@ app.get('/getallitems', (req, res) => {
         return;
     }
     Item.find({})
+        .populate('user',['username','_id'])
         .exec()
         .then((result, err) => {
             if (err) sendFailResponse(res, "error getting items from the database: " + err.message);
             else {
-                sendSuccessResponse(res, "OK", "items", result);
+                sendSuccessResponse(res, "got items successfully", "items", result);
             }
         });
 });
 
 app.post('/additem', (req, res) => {
+    var ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    logger.info("additem request from : " + ip);
+
     let parsedItem = JSON.parse(req.body);
     let sessionid = req.headers.cookie;
     let userid = sessions.getUserID(sessionid);
@@ -175,23 +185,27 @@ app.post('/additem', (req, res) => {
         return;
     }
     User.findOne({
-            id: userid
+            _id: userid
         })
         .exec()
         .then((result, err) => {
             if (err) sendFailResponse(res, "error adding item to the database: " + err.message);
+            else if (result === null) sendFailResponse(res, `could not find user with id ${userid} in the database`);
             else {
-                parsedItem.userid = result.id;
+                parsedItem.user = result.id;
                 let item = new Item(parsedItem);
                 item.save(function (err) {
                     if (err) sendFailResponse(res, "error item the user to the database: " + err.message);
-                    else sendSuccessResponse(res, "item " + item.name + " added", "itemid", item.id);
+                    else sendSuccessResponse(res, `item ${item.name} added successfully`, "itemid", item.id);
                 });
             }
         });
 });
 
 app.post('/deleteitem', (req, res) => {
+    var ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    logger.info("deleteitem request from : " + ip);
+
     let parsedItem = JSON.parse(req.body);
     let sessionid = req.headers.cookie;
     let userid = sessions.getUserID(sessionid);
@@ -201,15 +215,18 @@ app.post('/deleteitem', (req, res) => {
     }
     Item.deleteOne({
         id: parsedItem.id,
-        userid: userid
+        user: userid
     }, (err, result) => {
         if (err) sendFailResponse(res, "error getting items from the database: " + err.message);
-        if (result.n > 0) sendSuccessResponse(res, "item deleted successfully");
-        else sendFailResponse(res, "no item found with id " + parsedItem.id);
+        else if (result.n > 0) sendSuccessResponse(res, "item deleted successfully");
+        else sendFailResponse(res, `no item found with id ${parsedItem.id}`);
     });
 });
 
 app.post('/updateitem', (req, res) => {
+    var ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    logger.info("updateitem request from : " + ip);
+
     let parsedItem = JSON.parse(req.body);
     let sessionid = req.headers.cookie;
     let userid = sessions.getUserID(sessionid);

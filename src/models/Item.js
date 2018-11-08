@@ -23,7 +23,7 @@ let ItemSchema = new Schema({
         type: String,
         required: false
     },
-    userid: {
+    user: {
         type: Schema.Types.ObjectId,
         ref: 'user'
     }
