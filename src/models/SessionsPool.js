@@ -7,24 +7,24 @@ module.exports = class SessionsPool {
             this.sessions = sessions;
         };
         this.setNewSession = this.setNewSession.bind(this);
-        this.getUserName = this.getUserName.bind(this);
-        this.findSessionByUserName = this.findSessionByUserName.bind(this);
+        this.getUserID = this.getUserID.bind(this);
+        this.findSessionByUserId = this.findSessionByUserId.bind(this);
         this.removeSession = this.removeSession.bind(this);
     }
-    setNewSession(username) {
-        let existingSessionid = this.findSessionByUserName(username);
+    setNewSession(userid) {
+        let existingSessionid = this.findSessionByUserId(userid);
         if (existingSessionid)
             this.removeSession(existingSessionid);
         let id = uuid();
-        this.sessions[id] = username;
+        this.sessions[id] = userid;
         return id;
     };
-    getUserName(sessionid) {
+    getUserID(sessionid) {
         return this.sessions[sessionid];
     }
-    findSessionByUserName(username) {
+    findSessionByUserId(userid) {
         for (var key in this.sessions)
-            if (this.sessions[key] == username) return key;
+            if (this.sessions[key] == userid) return key;
         return false;
     };
     removeSession(sessionid) {
