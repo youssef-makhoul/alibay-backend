@@ -195,6 +195,45 @@ app.get('/getallitems', (req, res) => {
     }
 });
 
+app.post('/searchitems', (req, res) => {
+    try {
+        let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+        logger.info("searchitems request from : " + ip);
+
+        if (req.cookies.SID === undefined) {
+            sendFailResponse(res, "not authorized ! - sessionid not found");
+            return;
+        }
+        let sessionid = req.cookies.SID;
+        let userid = sessions.getUserID(sessionid);
+        if (userid === undefined) {
+            sendFailResponse(res, "not authorized ! - sessionid not recognized");
+            return;
+        }
+        let parsedBody = JSON.parse(req.body);
+        let search = {
+            name: {
+                $regex: parsedBody.search,
+                $options: 'i'
+            }
+        };
+        Item.find(search)
+            .populate('user')
+            .exec()
+            .then((result, err) => {
+                if (err) sendFailResponse(res, "error getting items from the database: " + err.message);
+                else {
+                    let arr = result.map(item => {
+                        return item.getItem();
+                    });
+                    sendSuccessResponse(res, "got items successfully", "items", arr);
+                }
+            });
+    } catch (error) {
+        sendFailResponse(res, error.message);
+    }
+});
+
 app.post('/additem', (req, res) => {
     try {
         let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
