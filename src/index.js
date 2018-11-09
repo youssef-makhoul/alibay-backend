@@ -44,6 +44,8 @@ app.use(
     })
 );
 
+app.use(require('cookie-parser')());
+
 let sendFailResponse = (res, msg, objName, obj) => {
     if (!objName) {
         let responseMsg = new ResponseMessage(false, msg);
@@ -95,7 +97,7 @@ app.post("/signup", (req, res) => {
                 user.save(function (err) {
                     if (err) sendFailResponse(res, "error addind the user to the database: " + err.message);
                     else {
-                        res.set("Set-Cookie", sessions.setNewSession(user.id));
+                        res.set("Set-Cookie", "SID=" + sessions.setNewSession(user.id));
                         sendSuccessResponse(res, `username ${username} added`);
                     }
                 });
@@ -128,7 +130,7 @@ app.post("/login", (req, res) => {
                     else {
                         let ok = result.comparePassword(crypto.hashPassword(password).hashedPassword);
                         if (ok) {
-                            res.set("Set-Cookie", sessions.setNewSession(result.id));
+                            res.set("Set-Cookie", "SID=" + sessions.setNewSession(result.id));
                             sendSuccessResponse(res, "authenticated ok");
                         } else sendFailResponse(res, `wrong password for user: ${username}`);
                     }
@@ -144,7 +146,11 @@ app.get('/logout', (req, res) => {
         let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
         logger.info("logout request from : " + ip);
 
-        let sessionid = req.headers.cookie;
+        if (req.cookies.SID === undefined) {
+            sendFailResponse(res, "not authorized ! - sessionid not found");
+            return;
+        }
+        let sessionid = req.cookies.SID;
         let userid = sessions.getUserID(sessionid);
         if (userid === undefined) {
             sendFailResponse(res, "not authorized ! - sessionid not recognized");
@@ -162,7 +168,11 @@ app.get('/getallitems', (req, res) => {
         let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
         logger.info("getallitems request from : " + ip);
 
-        let sessionid = req.headers.cookie;
+        if (req.cookies.SID === undefined) {
+            sendFailResponse(res, "not authorized ! - sessionid not found");
+            return;
+        }
+        let sessionid = req.cookies.SID;
         let userid = sessions.getUserID(sessionid);
         if (userid === undefined) {
             sendFailResponse(res, "not authorized ! - sessionid not recognized");
@@ -190,13 +200,17 @@ app.post('/additem', (req, res) => {
         let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
         logger.info("additem request from : " + ip);
         logger.info(`request body:${req.body}`);
-        let parsedItem = JSON.parse(req.body);
-        let sessionid = req.headers.cookie;
+        if (req.cookies.SID === undefined) {
+            sendFailResponse(res, "not authorized ! - sessionid not found");
+            return;
+        }
+        let sessionid = req.cookies.SID;
         let userid = sessions.getUserID(sessionid);
         if (userid === undefined) {
             sendFailResponse(res, "not authorized ! - sessionid not recognized");
             return;
         }
+        let parsedItem = JSON.parse(req.body);
         if (parsedItem === undefined) {
             sendFailResponse(res, "no item found in request body");
             return;
@@ -227,13 +241,17 @@ app.post('/deleteitem', (req, res) => {
         let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
         logger.info("deleteitem request from : " + ip);
         logger.info(`request body:${req.body}`);
-        let parsedItem = JSON.parse(req.body);
-        let sessionid = req.headers.cookie;
+        if (req.cookies.SID === undefined) {
+            sendFailResponse(res, "not authorized ! - sessionid not found");
+            return;
+        }
+        let sessionid = req.cookies.SID;
         let userid = sessions.getUserID(sessionid);
         if (userid === undefined) {
             sendFailResponse(res, "not authorized ! - sessionid not recognized");
             return;
         }
+        let parsedItem = JSON.parse(req.body);
         if (parsedItem.id == undefined) {
             sendFailResponse(res, "field -id- not found in request body");
             return;
@@ -256,13 +274,17 @@ app.post('/updateitem', (req, res) => {
         let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
         logger.info("updateitem request from : " + ip);
         logger.info(`request body:${req.body}`);
-        let parsedItem = JSON.parse(req.body);
-        let sessionid = req.headers.cookie;
+        if (req.cookies.SID === undefined) {
+            sendFailResponse(res, "not authorized ! - sessionid not found");
+            return;
+        }
+        let sessionid = req.cookies.SID;
         let userid = sessions.getUserID(sessionid);
         if (userid === undefined) {
             sendFailResponse(res, "not authorized ! - sessionid not recognized");
             return;
         }
+        let parsedItem = JSON.parse(req.body);
         if (parsedItem === undefined) {
             sendFailResponse(res, "no item found in request body");
             return;
@@ -285,13 +307,17 @@ app.post('/getitembyid', (req, res) => {
         let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
         logger.info("updateitem request from : " + ip);
         logger.info(`request body:${req.body}`);
-        let parsedItem = JSON.parse(req.body);
-        let sessionid = req.headers.cookie;
+        if (req.cookies.SID === undefined) {
+            sendFailResponse(res, "not authorized ! - sessionid not found");
+            return;
+        }
+        let sessionid = req.cookies.SID;
         let userid = sessions.getUserID(sessionid);
         if (userid === undefined) {
             sendFailResponse(res, "not authorized ! - sessionid not recognized");
             return;
         }
+        let parsedItem = JSON.parse(req.body);
         if (parsedItem.id == null) {
             sendFailResponse(res, "item id was not found in request body");
             return;
@@ -311,13 +337,17 @@ app.post('/additemtocart', (req, res) => {
         let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
         logger.info("additemtocart request from : " + ip);
         logger.info(`request body:${req.body}`);
-        let parsedItem = JSON.parse(req.body);
-        let sessionid = req.headers.cookie;
+        if (req.cookies.SID === undefined) {
+            sendFailResponse(res, "not authorized ! - sessionid not found");
+            return;
+        }
+        let sessionid = req.cookies.SID;
         let userid = sessions.getUserID(sessionid);
         if (userid === undefined) {
             sendFailResponse(res, "not authorized ! - sessionid not recognized");
             return;
         }
+        let parsedItem = JSON.parse(req.body);
         if (parsedItem.id == null) {
             sendFailResponse(res, "item id was not found in request body");
             return;
@@ -367,13 +397,17 @@ app.post('/removeitemfromcart', (req, res) => {
         let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
         logger.info("removeitemfromcart request from : " + ip);
         logger.info(`request body:${req.body}`);
-        let parsedItem = JSON.parse(req.body);
-        let sessionid = req.headers.cookie;
+        if (req.cookies.SID === undefined) {
+            sendFailResponse(res, "not authorized ! - sessionid not found");
+            return;
+        }
+        let sessionid = req.cookies.SID;
         let userid = sessions.getUserID(sessionid);
         if (userid === undefined) {
             sendFailResponse(res, "not authorized ! - sessionid not recognized");
             return;
         }
+        let parsedItem = JSON.parse(req.body);
         if (parsedItem.id == null) {
             sendFailResponse(res, "item id was not found");
             return;
@@ -418,7 +452,11 @@ app.get('/getitemsincart', (req, res) => {
         let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
         logger.info("getitemsincart request from : " + ip);
 
-        let sessionid = req.headers.cookie;
+        if (req.cookies.SID === undefined) {
+            sendFailResponse(res, "not authorized ! - sessionid not found");
+            return;
+        }
+        let sessionid = req.cookies.SID;
         let userid = sessions.getUserID(sessionid);
         if (userid === undefined) {
             sendFailResponse(res, "not authorized ! - sessionid not recognized");
