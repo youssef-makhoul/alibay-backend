@@ -42,4 +42,11 @@ UserSchema.methods.comparePassword = function (password) {
     return this.password === password;
 };
 
+UserSchema.methods.getUserSimplified = function () {
+    return {
+        id: this._id,
+        username: this.username
+    };
+};
+
 module.exports = mongoose.model('user', UserSchema);

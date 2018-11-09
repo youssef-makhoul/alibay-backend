@@ -163,12 +163,15 @@ app.get('/getallitems', (req, res) => {
         return;
     }
     Item.find({})
-        .populate('user', ['username', '_id'])
+        .populate('user')
         .exec()
         .then((result, err) => {
             if (err) sendFailResponse(res, "error getting items from the database: " + err.message);
             else {
-                sendSuccessResponse(res, "got items successfully", "items", result);
+                let arr = result.map(item => {
+                    return item.getItem();
+                });
+                sendSuccessResponse(res, "got items successfully", "items", arr);
             }
         });
 });
@@ -184,6 +187,10 @@ app.post('/additem', (req, res) => {
         sendFailResponse(res, "not authorized ! - sessionid not recognized");
         return;
     }
+    if (parsedItem === undefined) {
+        sendFailResponse(res, "no item found in request body");
+        return;
+    }
     User.findOne({
             _id: userid
         })
@@ -196,7 +203,7 @@ app.post('/additem', (req, res) => {
                 let item = new Item(parsedItem);
                 item.save(function (err) {
                     if (err) sendFailResponse(res, "error item the user to the database: " + err.message);
-                    else sendSuccessResponse(res, `item ${item.name} added successfully`, "itemid", item.id);
+                    else sendSuccessResponse(res, `item ${item.name} added successfully`, "id", item.id);
                 });
             }
         });
@@ -211,6 +218,10 @@ app.post('/deleteitem', (req, res) => {
     let userid = sessions.getUserID(sessionid);
     if (userid === undefined) {
         sendFailResponse(res, "not authorized ! - sessionid not recognized");
+        return;
+    }
+    if (parsedItem.id == undefined) {
+        sendFailResponse(res, "field -id- not found in request body");
         return;
     }
     Item.deleteOne({
@@ -234,6 +245,10 @@ app.post('/updateitem', (req, res) => {
         sendFailResponse(res, "not authorized ! - sessionid not recognized");
         return;
     }
+    if (parsedItem === undefined) {
+        sendFailResponse(res, "no item found in request body");
+        return;
+    }
     Item.updateOne({
             _id: parsedItem.id
         },
@@ -242,6 +257,28 @@ app.post('/updateitem', (req, res) => {
             else if (result.n > 0) sendSuccessResponse(res, "item updated successfully");
             else sendFailResponse(res, "no item found with id " + parsedItem.id);
         });
+});
+
+app.post('/getitembyid', (req, res) => {
+    let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    logger.info("updateitem request from : " + ip);
+
+    let parsedItem = JSON.parse(req.body);
+    let sessionid = req.headers.cookie;
+    let userid = sessions.getUserID(sessionid);
+    if (userid === undefined) {
+        sendFailResponse(res, "not authorized ! - sessionid not recognized");
+        return;
+    }
+    if (parsedItem.id == null) {
+        sendFailResponse(res, "item id was not found in request body");
+        return;
+    }
+    Item.findById(parsedItem.id).populate('user').exec().then((result, err) => {
+        if (err) sendFailResponse(res, "error getting item from the database: " + err.message);
+        else if (result) sendSuccessResponse(res, "item found successfully", "item", result.getItem());
+        else sendFailResponse(res, "no item found with id " + parsedItem.id);
+    });
 });
 
 app.post('/additemtocart', (req, res) => {
@@ -256,7 +293,7 @@ app.post('/additemtocart', (req, res) => {
         return;
     }
     if (parsedItem.id == null) {
-        sendFailResponse(res, "item id was not found");
+        sendFailResponse(res, "item id was not found in request body");
         return;
     }
     Item.findOne({
@@ -275,12 +312,13 @@ app.post('/additemtocart', (req, res) => {
                         if (error) sendFailResponse(res, `error getting user from the database: ${err.message}`);
                         else if (user == null) sendFailResponse(res, `no item found with id ${parsedItem.id}`);
                         else {
-                            let updated = false
-                            for (let i = 0; i < user.cart.length; i++) {
-                                if (user.cart[i].item._id.equals(item._id)) user.cart[i].quantity = user.cart[i].quantity + 1;
-                                updated = true;
-                            }
-                            if (!updated) user.cart.push({
+                            let found = false;
+                            for (let i = 0; i < user.cart.length; i++)
+                                if (user.cart[i].item._id.equals(item._id)) {
+                                    user.cart[i].quantity = user.cart[i].quantity + 1;
+                                    found = true;
+                                }
+                            if (!found) user.cart.push({
                                 item: item._id,
                                 quantity: 1
                             });
@@ -338,6 +376,36 @@ app.post('/removeitemfromcart', (req, res) => {
                             });
                         }
                     });
+            }
+        });
+});
+
+app.get('/getitemsincart', (req, res) => {
+    let ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+    logger.info("getitemsincart request from : " + ip);
+
+    let sessionid = req.headers.cookie;
+    let userid = sessions.getUserID(sessionid);
+    if (userid === undefined) {
+        sendFailResponse(res, "not authorized ! - sessionid not recognized");
+        return;
+    }
+    User.findOne({
+            _id: userid
+        })
+        .populate('cart.item')
+        .exec()
+        .then((result, err) => {
+            if (err) sendFailResponse(res, "error getting user cart from the database: " + err.message);
+            else {
+                let arr = [];
+                for (let i = 0; i < result.cart.length; i++) {
+                    arr.push({
+                        item: result.cart[i].item.getItemSimplified(),
+                        quantity: result.cart[i].quantity
+                    });
+                }
+                sendSuccessResponse(res, "getting items in cart done successfully", "items", arr);
             }
         });
 });

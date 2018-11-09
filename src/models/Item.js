@@ -29,4 +29,25 @@ let ItemSchema = new Schema({
     }
 });
 
+ItemSchema.methods.getItemSimplified = function () {
+    return {
+        id: this._id,
+        name: this.name,
+        price: this.price,
+        image: this.image
+    };
+};
+
+ItemSchema.methods.getItem = function () {
+    return {
+        id: this._id,
+        name: this.name,
+        price: this.price,
+        quantity: this.quantity,
+        description: this.description,
+        image: this.image,
+        user: this.user.getUserSimplified()
+    };
+};
+
 module.exports = mongoose.model('item', ItemSchema);
